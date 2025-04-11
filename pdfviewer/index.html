@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FileAgo - PDF Reader</title>
+    <link rel="stylesheet" href="./assets/fas.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <header class="app-header" id="menubar-panel">
+        <div class="left-controls">
+          <button
+            class="action-button"
+            onclick="toggle_outline_panel()"
+            title="Toggle Outline"
+          >
+            <i class="fas fa-list"></i>
+          </button>
+          <div class="app-logo">
+            <i class="fas fa-file-pdf"></i>
+            <span>DocView PDF</span>
+          </div>
+        </div>
+
+        <div class="app-toolbar">
+          <div class="app-toolbar-group">
+            <button
+              class="action-button"
+              onclick="show_search_panel()"
+              title="Search"
+            >
+              <i class="fas fa-search"></i>
+            </button>
+            <button
+              class="action-button"
+              onclick="rotate_pages(-90)"
+              title="Rotate Left"
+            >
+              <i class="fas fa-undo"></i>
+            </button>
+            <button
+              class="action-button"
+              onclick="rotate_pages(90)"
+              title="Rotate Right"
+            >
+              <i class="fas fa-redo"></i>
+            </button>
+            <div class="app-menu">
+              <button class="dropdown-toggle" id="view-menu-toggle">
+                <div class="zoom-control toggle">
+                  <span class="zoom-value" id="zoom-level">100%</span>
+                  <i class="fa-solid fa-angle-down"></i>
+                </div>
+              </button>
+              <div class="dropdown-menu" id="view-menu">
+                <div class="dropdown-item" onclick="zoom_to(48)">
+                  <i class="fas fa-search-minus"></i>
+                  50%
+                </div>
+                <div class="dropdown-item" onclick="zoom_to(72)">
+                  <i class="fas fa-search"></i>
+                  75% (72 dpi)
+                </div>
+                <div class="dropdown-item" onclick="zoom_to(96)">
+                  <i class="fas fa-search"></i>
+                  100% (96 dpi)
+                </div>
+                <div class="dropdown-item" onclick="zoom_to(120)">
+                  <i class="fas fa-search-plus"></i>
+                  125%
+                </div>
+                <div class="dropdown-item" onclick="zoom_to(144)">
+                  <i class="fas fa-search-plus"></i>
+                  150%
+                </div>
+                <div class="dropdown-item" onclick="zoom_to(192)">
+                  <i class="fas fa-search-plus"></i>
+                  200%
+                </div>
+              </div>
+            </div>
+
+            <div class="zoom-control">
+              <button class="zoom-button" onclick="zoom_out()" title="Zoom Out">
+                <i class="fas fa-minus"></i>
+              </button>
+              <button class="zoom-button" onclick="zoom_in()" title="Zoom In">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+
+            <button
+              class="action-button"
+              onclick="toggle_fullscreen()"
+              title="Rotate Right"
+            >
+              <i class="fa-solid fa-expand"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="app-content">
+        <aside class="app-sidebar hidden" id="outline-panel">
+          <div class="sidebar-header">
+            <span>Document Outline</span>
+            <button class="sidebar-close" onclick="toggle_outline_panel()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="outline-container">
+            <ul class="outline-list" id="outline">
+              <!-- outline inserted here -->
+            </ul>
+          </div>
+        </aside>
+
+        <main class="document-container" id="page-panel">
+          <div id="message">
+            <i class="fas fa-file-pdf"></i>
+            Loading Viewer...
+          </div>
+          <div id="pages">
+            <!-- pages inserted here -->
+          </div>
+        </main>
+      </div>
+
+      <footer class="search-panel" id="search-panel" style="display: none">
+        <input
+          id="search-input"
+          class="search-input"
+          type="search"
+          placeholder="Search in document..."
+          autocomplete="off"
+          size="40"
+        />
+        <button class="search-button" onclick="run_search(-1, 1)">
+          <i class="fas fa-arrow-up"></i>
+          <span>Previous</span>
+        </button>
+        <button class="search-button" onclick="run_search(1, 1)">
+          <i class="fas fa-arrow-down"></i>
+          <span>Next</span>
+        </button>
+        <div class="search-status" id="search-status"></div>
+        <button class="search-close" onclick="hide_search_panel()">
+          <i class="fas fa-times"></i>
+        </button>
+      </footer>
+    </div>
+
+    <!-- Hidden input for file dialog -->
+    <input
+      style="display: none"
+      id="open-file-input"
+      type="file"
+      accept=".pdf,application/pdf"
+      onchange="open_document_from_file(event.target.files[0])"
+    />
+
+    <script>
+      // Toggle dropdown menus
+      document.querySelectorAll(".dropdown-toggle").forEach((toggle) => {
+        toggle.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const menu = this.nextElementSibling;
+          document.querySelectorAll(".dropdown-menu").forEach((m) => {
+            if (m !== menu) m.classList.remove("show");
+          });
+          menu.classList.toggle("show");
+        });
+      });
+
+      // Close dropdowns when clicking outside
+      document.addEventListener("click", function () {
+        document.querySelectorAll(".dropdown-menu").forEach((menu) => {
+          menu.classList.remove("show");
+        });
+      });
+
+      // Initialize with proper zoom level
+      document.addEventListener("DOMContentLoaded", function () {
+        // Set initial zoom level display to 100%
+        document.getElementById("zoom-level").textContent = "100%";
+      });
+    </script>
+    <script src="main.js"></script>
+  </body>
+</html>
