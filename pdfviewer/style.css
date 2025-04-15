@@ -6,7 +6,6 @@
   --background: #f8fafc;
   --background-rgb: 248, 250, 252;
   --surface: #ffffff;
-  --surface-rgb: 255, 255, 255;
   --text: #1e293b;
   --border: #e2e8f0;
   --shadow: rgba(0, 0, 0, 0.1);
@@ -15,24 +14,57 @@
   --header-height: 60px;
   --search-height: 56px;
   --radius: 8px;
+  --logo: #e45b5b;
   --transition: all 0.2s ease-in-out;
 }
 
+/* System dark theme */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.theme-override) {
     --primary: #3b82f6;
     --primary-light: #60a5fa;
     --primary-dark: #2563eb;
     --secondary: #94a3b8;
     --background: #0f172a;
     --background-rgb: 15, 23, 42;
-    --surface: #1e293b;
-    --surface-rgb: 30, 41, 59;
+    --surface: #545454;
     --text: #f1f5f9;
     --border: #334155;
     --shadow: rgba(0, 0, 0, 0.3);
     --shadow-lg: rgba(0, 0, 0, 0.4);
+    --logo: #fedcdc;
   }
+}
+
+/* Manual theme overrides */
+:root.theme-dark {
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --primary-dark: #2563eb;
+  --secondary: #94a3b8;
+  --background: #0f172a;
+  --background-rgb: 15, 23, 42;
+  --surface: #545454;
+  --text: #f1f5f9;
+  --border: #334155;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-lg: rgba(0, 0, 0, 0.4);
+  --logo: #fedcdc;
+}
+
+:root.theme-light {
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --primary-dark: #1d4ed8;
+  --secondary: #64748b;
+  --background: #f8fafc;
+  --background-rgb: 248, 250, 252;
+  --surface: #ffffff;
+  --text: #1e293b;
+  --border: #e2e8f0;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow-lg: rgba(0, 0, 0, 0.15);
+  --logo: #e45b5b;
 }
 
 * {
@@ -52,8 +84,6 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: url("./assets/images/texture.webp");
-  background-blend-mode: difference;
 }
 
 .app-container {
@@ -78,7 +108,15 @@ body {
 
 .left-controls {
   display: flex;
-  gap: 12px;
+  gap: 5px;
+}
+.left-controls span {
+  color: var(--logo);
+  margin-left: 12px;
+}
+
+.left-controls svg path {
+  fill: var(--logo);
 }
 
 .app-logo {
@@ -171,12 +209,19 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-  .dropdown-toggle:hover {
+  :root:not(.theme-override) .dropdown-toggle:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
-  .dropdown-item:hover {
+  :root:not(.theme-override) .dropdown-item:hover {
     background-color: rgba(255, 255, 255, 0.05);
   }
+}
+
+:root.theme-dark .dropdown-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+:root.theme-dark .dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .action-button {
@@ -331,6 +376,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: url("./assets/images/texture.webp");
+  background-repeat: repeat;
 }
 
 #message {
@@ -558,15 +605,60 @@ div.search > div {
 
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
-  div.page {
+  :root:not(.theme-override) div.page {
     background-color: var(--surface);
   }
 
-  div.search > div {
+  :root:not(.theme-override) div.search > div {
     background-color: rgba(255, 180, 0, 0.3);
     border: 1px solid rgba(255, 180, 0, 0.5);
     mix-blend-mode: screen;
   }
+
+  :root:not(.theme-override) .search-input {
+    background-color: var(--surface);
+    color: var(--text);
+  }
+
+  :root:not(.theme-override) .watermark {
+    opacity: 0.15;
+    mix-blend-mode: screen;
+  }
+
+  :root:not(.theme-override) .document-container {
+    background-blend-mode: soft-light;
+    filter: brightness(0.8) contrast(1.2);
+  }
+}
+
+:root.theme-dark div.page {
+  background-color: var(--surface);
+}
+
+:root.theme-dark div.search > div {
+  background-color: rgba(255, 180, 0, 0.3);
+  border: 1px solid rgba(255, 180, 0, 0.5);
+  mix-blend-mode: screen;
+}
+
+:root.theme-dark .search-input {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+:root.theme-dark .watermark {
+  opacity: 0.15;
+  mix-blend-mode: screen;
+}
+
+:root.theme-dark .document-container {
+  background-blend-mode: color-burn;
+  filter: brightness(0.8) contrast(1.5);
+}
+
+:root.theme-light .document-container {
+  background-blend-mode: normal;
+  filter: none;
 }
 
 /* Responsive adjustments */

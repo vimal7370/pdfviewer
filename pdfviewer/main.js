@@ -97,17 +97,17 @@ function show_message(msg, showLoader = false) {
   //incase the message container was hidden
   container.style.display = "block";
   container.innerHTML = "";
-  
+
   if (showLoader) {
     // Add loading icon
     const loaderIcon = document.createElement("i");
     loaderIcon.className = "fas fa-spinner";
     container.appendChild(loaderIcon);
-    
+
     // Add a line break
     container.appendChild(document.createElement("br"));
   }
-  
+
   // Add the message text
   const textNode = document.createElement("span");
   textNode.textContent = msg;
@@ -685,7 +685,7 @@ async function handlePrint() {
   try {
     // Show loading message with animation
     show_message("Preparing document for printing...", true);
-    
+
     const pdfUrl = globalConfig.fileAccess.url;
     const response = await fetch(pdfUrl);
     const pdfData = await response.arrayBuffer();
@@ -713,8 +713,6 @@ async function handlePrint() {
     show_message("Error preparing document for print: " + error.message);
   }
 }
-
-// KEY BINDINGS & MOUSE WHEEL ZOOM
 
 /**
  * Handles mouse wheel events for zooming.
@@ -1079,7 +1077,9 @@ function extractFilenameFromUrl(url) {
 
     // If we have a filename with extension, return it
     if (filename && filename.includes(".")) {
-      return decodeURIComponent(filename);
+      // Remove query parameters (like ?auth="<string>") from the filename
+      const cleanFilename = decodeURIComponent(filename).split("?")[0];
+      return cleanFilename;
     }
 
     // If no valid filename found in the path, return the original URL
@@ -1090,7 +1090,9 @@ function extractFilenameFromUrl(url) {
     const potentialFilename = segments[segments.length - 1];
 
     if (potentialFilename && potentialFilename.includes(".")) {
-      return decodeURIComponent(potentialFilename);
+      // Remove query parameters (like ?auth="<string>") from the filename
+      const cleanFilename = decodeURIComponent(potentialFilename).split("?")[0];
+      return cleanFilename;
     }
 
     return url;
@@ -1167,6 +1169,8 @@ async function main() {
   });
 
   initTab(secureTab);
+  const { initThemeManager } = await import("./utils/themeManager.js");
+  initThemeManager();
 }
 
 async function initTab(secureChildTab) {
@@ -1189,5 +1193,19 @@ async function launchViewer(credentials) {
   const config = updateGlobalConfig(credentials);
   clear_message();
   globalConfig = config;
+
+  // Show or hide print button based on user permissions
+  const printButton = document.getElementById("print-button");
+  if (printButton) {
+    printButton.style.display = globalConfig.userAccess.canPrint ? "inline-block" : "none";
+  }
+
+  // Initialize theme manager
+
   open_document_from_url(config.fileAccess.url);
+}
+
+async function cycleTheme() {
+  const { cycleTheme } = await import("./utils/themeManager.js");
+  cycleTheme();
 }
