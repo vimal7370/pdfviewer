@@ -1023,6 +1023,120 @@ function close_document() {
 }
 
 /**
+ * Creates and shows a password dialog for protected documents.
+ * @param {number} doc_id - The document ID
+ * @param {string} title - The document title
+ * @param {ArrayBuffer} buffer - The original document buffer
+ * @param {string} magic - The file type magic
+ * @param {boolean} showError - Whether to show an error message
+ * @returns {Promise} A promise that resolves when authentication is complete
+ */
+async function promptForPassword(
+  doc_id,
+  title,
+  buffer,
+  magic,
+  showError = false
+) {
+  return new Promise((resolve, reject) => {
+    // Create dialog container
+    const dialog = document.createElement("div");
+    dialog.className = "password-dialog";
+
+    // Create dialog content
+    dialog.innerHTML = `
+      <div class="password-dialog-content">
+        <div class="password-dialog-header">
+          <h3 class="password-dialog-title">Password Required</h3>
+        </div>
+        <div class="password-dialog-body">
+          <p class="password-dialog-message">This document is password protected. Please enter the password to open it.</p>
+          <div class="password-input-container">
+            <input type="password" class="password-input" placeholder="Enter password" />
+            <button class="password-toggle" title="Toggle password visibility">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <p class="password-error" ${
+            showError ? 'style="display: block;"' : ""
+          }>Incorrect password. Please try again.</p>
+        </div>
+        <div class="password-dialog-footer">
+          <button class="password-dialog-button password-cancel-button">Cancel</button>
+          <button class="password-dialog-button password-submit-button">Submit</button>
+        </div>
+      </div>
+    `;
+
+    // Add dialog to the document
+    document.body.appendChild(dialog);
+
+    // Get elements
+    const passwordInput = dialog.querySelector(".password-input");
+    const toggleButton = dialog.querySelector(".password-toggle");
+    const cancelButton = dialog.querySelector(".password-cancel-button");
+    const submitButton = dialog.querySelector(".password-submit-button");
+
+    // Focus the input field
+    passwordInput.focus();
+
+    // Toggle password visibility
+    toggleButton.addEventListener("click", () => {
+      const type = passwordInput.type === "password" ? "text" : "password";
+      passwordInput.type = type;
+      toggleButton.innerHTML =
+        type === "password"
+          ? '<i class="fas fa-eye"></i>'
+          : '<i class="fas fa-eye-slash"></i>';
+    });
+
+    // Handle cancel button
+    cancelButton.addEventListener("click", () => {
+      document.body.removeChild(dialog);
+      close_document();
+      show_message("Document opening cancelled.");
+      reject(new Error("Document opening cancelled"));
+    });
+
+    // Handle submit button
+    submitButton.addEventListener("click", async () => {
+      const password = passwordInput.value;
+      if (!password) return;
+
+      try {
+        // Attempt to authenticate with the provided password
+        const isAuthenticated = await worker.authenticatePassword(
+          doc_id,
+          password
+        );
+        if (isAuthenticated) {
+          // Password is correct, remove dialog and continue loading
+          document.body.removeChild(dialog);
+          resolve(true);
+        } else {
+          // Password is incorrect, show error and try again
+          document.body.removeChild(dialog);
+          await promptForPassword(doc_id, title, buffer, magic, true);
+          resolve(true);
+        }
+      } catch (error) {
+        console.error("Authentication error:", error);
+        document.body.removeChild(dialog);
+        show_message("Error authenticating document: " + error.message);
+        reject(error);
+      }
+    });
+
+    // Handle Enter key press
+    passwordInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        submitButton.click();
+      }
+    });
+  });
+}
+
+/**
  * Opens a document from an ArrayBuffer.
  * @param {ArrayBuffer} buffer - The document data
  * @param {string} magic - The file type magic (e.g., "application/pdf")
@@ -1030,36 +1144,51 @@ function close_document() {
  * @returns {Promise} A promise that resolves when the document is loaded
  */
 async function open_document_from_buffer(buffer, magic, title) {
-  current_doc = await worker.openDocumentFromBuffer(buffer, magic);
+  try {
+    // First open the document
+    current_doc = await worker.openDocumentFromBuffer(buffer, magic);
 
-  document.title = "Pdf Viewer: " + title;
+    // Check if the document is password protected
+    if (await worker.needsPassword(current_doc)) {
+      // Show password dialog
+      await promptForPassword(current_doc, title, buffer, magic);
+    }
 
-  var page_count = await worker.countPages(current_doc);
+    document.title = "Pdf Viewer: " + title;
 
-  // Use second page as default page size (the cover page is often differently sized)
-  var page_size = await worker.getPageSize(current_doc, page_count > 1 ? 1 : 0);
+    var page_count = await worker.countPages(current_doc);
 
-  page_list = [];
-  for (let i = 0; i < page_count; ++i)
-    page_list[i] = new PageView(current_doc, i, page_size, current_zoom);
+    // Use second page as default page size (the cover page is often differently sized)
+    var page_size = await worker.getPageSize(
+      current_doc,
+      page_count > 1 ? 1 : 0
+    );
 
-  for (let page of page_list) {
-    document.getElementById("pages").appendChild(page.rootNode);
-    page_observer.observe(page.rootNode);
+    page_list = [];
+    for (let i = 0; i < page_count; ++i)
+      page_list[i] = new PageView(current_doc, i, page_size, current_zoom);
+
+    for (let page of page_list) {
+      document.getElementById("pages").appendChild(page.rootNode);
+      page_observer.observe(page.rootNode);
+    }
+
+    var outline = await worker.documentOutline(current_doc);
+    if (outline) {
+      build_outline(document.getElementById("outline"), outline);
+      show_outline_panel();
+    } else {
+      hide_outline_panel();
+    }
+
+    clear_message();
+
+    current_search_needle = "";
+    current_search_page = 0;
+  } catch (error) {
+    console.error("Error opening document:", error);
+    show_message("Error opening document: " + error.message);
   }
-
-  var outline = await worker.documentOutline(current_doc);
-  if (outline) {
-    build_outline(document.getElementById("outline"), outline);
-    show_outline_panel();
-  } else {
-    hide_outline_panel();
-  }
-
-  clear_message();
-
-  current_search_needle = "";
-  current_search_page = 0;
 }
 
 /**
@@ -1109,48 +1238,48 @@ async function open_document_from_url(path) {
   try {
     const filename = extractFilenameFromUrl(path);
     show_message("Loading " + filename);
-    
+
     // Create progress bar container
     const messageContainer = document.getElementById("message");
     const progressContainer = document.createElement("div");
     progressContainer.className = "progress-container";
     messageContainer.appendChild(progressContainer);
-    
+
     // Create the progress bar element
     const progressBar = document.createElement("div");
     progressBar.className = "progress-bar";
     progressContainer.appendChild(progressBar);
-    
+
     // Create progress text
     const progressText = document.createElement("div");
     progressText.className = "progress-text";
     progressText.textContent = "0%";
     messageContainer.appendChild(progressText);
-    
+
     // Fetch the document with progress tracking
     const response = await fetch(path);
     if (!response.ok) throw new Error("Could not fetch document.");
-    
+
     // Get total file size from Content-Length header
     const contentLength = response.headers.get("Content-Length");
     const total = contentLength ? parseInt(contentLength, 10) : 0;
-    
+
     // Create a reader from the response body stream
     const reader = response.body.getReader();
     let receivedLength = 0;
     let chunks = [];
-    
+
     // Read the stream
-    while(true) {
-      const {done, value} = await reader.read();
-      
+    while (true) {
+      const { done, value } = await reader.read();
+
       if (done) {
         break;
       }
-      
+
       chunks.push(value);
       receivedLength += value.length;
-      
+
       // Calculate and display progress
       if (total > 0) {
         const percentComplete = Math.round((receivedLength / total) * 100);
@@ -1158,21 +1287,17 @@ async function open_document_from_url(path) {
         progressText.textContent = percentComplete + "%";
       }
     }
-    
+
     // Concatenate chunks into a single Uint8Array
     let pdfData = new Uint8Array(receivedLength);
     let position = 0;
-    for(let chunk of chunks) {
+    for (let chunk of chunks) {
       pdfData.set(chunk, position);
       position += chunk.length;
     }
-    
+
     // Convert to ArrayBuffer and open the document
-    await open_document_from_buffer(
-      pdfData.buffer,
-      path,
-      filename
-    );
+    await open_document_from_buffer(pdfData.buffer, path, filename);
   } catch (error) {
     show_message(error.name + ": " + error.message);
     console.error(error);

@@ -51,10 +51,29 @@ var document_map = {};
 methods.openDocumentFromBuffer = function (buffer, magic) {
   let doc_id = document_next_id++;
   document_map[doc_id] = mupdf.Document.openDocument(buffer, magic);
-
- 
-
   return doc_id;
+};
+
+/**
+ * Checks if the document requires a password
+ * @param {number} doc_id - The document ID
+ * @returns {boolean} True if the document needs a password
+ */
+methods.needsPassword = function (doc_id) {
+  let doc = document_map[doc_id];
+  return doc.needsPassword();
+};
+
+/**
+ * Authenticates a password-protected document
+ * @param {number} doc_id - The document ID
+ * @param {string} password - The password to try
+ * @returns {boolean} True if the password was correct
+ */
+methods.authenticatePassword = function (doc_id, password) {
+  let doc = document_map[doc_id];
+  // The authenticatePassword method returns a number: 0 for failure, non-zero for success
+  return doc.authenticatePassword(password) > 0;
 };
 
 /**
