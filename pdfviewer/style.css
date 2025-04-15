@@ -115,10 +115,6 @@ body {
   margin-left: 12px;
 }
 
-.left-controls svg path {
-  fill: var(--logo);
-}
-
 .app-logo {
   display: flex;
   align-items: center;
@@ -368,6 +364,15 @@ body {
   color: var(--primary);
 }
 
+
+.left-controls .app-logo-light {
+  display: block;
+}
+
+.left-controls .app-logo-dark {
+  display: none;
+}
+
 /* Main document view */
 .document-container {
   flex: 1;
@@ -408,6 +413,29 @@ body {
   margin-bottom: 16px;
   color: var(--primary);
   animation: spin 1.5s linear infinite;
+}
+
+/* Progress Bar */
+.progress-container {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border);
+  border-radius: 4px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--logo);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 14px;
+  margin-top: 4px;
+  color: var(--secondary);
 }
 
 @keyframes spin {
@@ -620,6 +648,13 @@ div.search > div {
     color: var(--text);
   }
 
+  :root:not(.theme-override) .left-controls .app-logo-light {
+    display: none;
+  }
+  :root:not(.theme-override).left-controls.app-logo-dark {
+    display: block;
+  }
+
   :root:not(.theme-override) .watermark {
     opacity: 0.15;
     mix-blend-mode: screen;
@@ -649,6 +684,14 @@ div.search > div {
 :root.theme-dark .watermark {
   opacity: 0.15;
   mix-blend-mode: screen;
+}
+
+:root.theme-dark .left-controls .app-logo-light {
+  display: none;
+}
+
+:root.theme-dark .left-controls .app-logo-dark {
+  display: block;
 }
 
 :root.theme-dark .document-container {

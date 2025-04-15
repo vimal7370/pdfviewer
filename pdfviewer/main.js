@@ -1032,7 +1032,7 @@ function close_document() {
 async function open_document_from_buffer(buffer, magic, title) {
   current_doc = await worker.openDocumentFromBuffer(buffer, magic);
 
-  document.title = (await worker.documentTitle(current_doc)) || title;
+  document.title = "Pdf Viewer: " + title;
 
   var page_count = await worker.countPages(current_doc);
 
@@ -1109,9 +1109,70 @@ async function open_document_from_url(path) {
   try {
     const filename = extractFilenameFromUrl(path);
     show_message("Loading " + filename);
-    let response = await fetch(path);
+    
+    // Create progress bar container
+    const messageContainer = document.getElementById("message");
+    const progressContainer = document.createElement("div");
+    progressContainer.className = "progress-container";
+    messageContainer.appendChild(progressContainer);
+    
+    // Create the progress bar element
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+    progressContainer.appendChild(progressBar);
+    
+    // Create progress text
+    const progressText = document.createElement("div");
+    progressText.className = "progress-text";
+    progressText.textContent = "0%";
+    messageContainer.appendChild(progressText);
+    
+    // Fetch the document with progress tracking
+    const response = await fetch(path);
     if (!response.ok) throw new Error("Could not fetch document.");
-    await open_document_from_buffer(await response.arrayBuffer(), path, path);
+    
+    // Get total file size from Content-Length header
+    const contentLength = response.headers.get("Content-Length");
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+    
+    // Create a reader from the response body stream
+    const reader = response.body.getReader();
+    let receivedLength = 0;
+    let chunks = [];
+    
+    // Read the stream
+    while(true) {
+      const {done, value} = await reader.read();
+      
+      if (done) {
+        break;
+      }
+      
+      chunks.push(value);
+      receivedLength += value.length;
+      
+      // Calculate and display progress
+      if (total > 0) {
+        const percentComplete = Math.round((receivedLength / total) * 100);
+        progressBar.style.width = percentComplete + "%";
+        progressText.textContent = percentComplete + "%";
+      }
+    }
+    
+    // Concatenate chunks into a single Uint8Array
+    let pdfData = new Uint8Array(receivedLength);
+    let position = 0;
+    for(let chunk of chunks) {
+      pdfData.set(chunk, position);
+      position += chunk.length;
+    }
+    
+    // Convert to ArrayBuffer and open the document
+    await open_document_from_buffer(
+      pdfData.buffer,
+      path,
+      filename
+    );
   } catch (error) {
     show_message(error.name + ": " + error.message);
     console.error(error);
@@ -1197,7 +1258,9 @@ async function launchViewer(credentials) {
   // Show or hide print button based on user permissions
   const printButton = document.getElementById("print-button");
   if (printButton) {
-    printButton.style.display = globalConfig.userAccess.canPrint ? "inline-block" : "none";
+    printButton.style.display = globalConfig.userAccess.canPrint
+      ? "inline-block"
+      : "none";
   }
 
   // Initialize theme manager
