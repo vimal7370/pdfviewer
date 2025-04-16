@@ -84,6 +84,7 @@ function set_delete(set, item) {
 // Global Variables
 
 let globalConfig;
+let isPasswordProtected = false; // Track if the current document is password protected
 
 // LOADING AND ERROR MESSAGES
 
@@ -682,6 +683,7 @@ function zoom_to(new_zoom) {
 }
 
 async function handlePrint() {
+  if (isPasswordProtected) return;
   try {
     // Show loading message with animation
     show_message("Preparing document for printing...", true);
@@ -1010,6 +1012,9 @@ function close_document() {
   hide_outline_panel();
   hide_search_panel();
 
+  // Reset password protection flag when closing document
+  isPasswordProtected = false;
+
   if (current_doc) {
     worker.closeDocument(current_doc);
     current_doc = 0;
@@ -1150,8 +1155,20 @@ async function open_document_from_buffer(buffer, magic, title) {
 
     // Check if the document is password protected
     if (await worker.needsPassword(current_doc)) {
+      // Mark document as password protected
+      isPasswordProtected = true;
+
+      // Update print button visibility
+      const printButton = document.getElementById("print-button");
+      if (printButton) {
+        printButton.style.display = "none";
+      }
+
       // Show password dialog
       await promptForPassword(current_doc, title, buffer, magic);
+    } else {
+      // Document is not password protected
+      isPasswordProtected = false;
     }
 
     document.title = "Pdf Viewer: " + title;
@@ -1380,12 +1397,14 @@ async function launchViewer(credentials) {
   clear_message();
   globalConfig = config;
 
-  // Show or hide print button based on user permissions
+  // Show or hide print button based on user permissions and document protection status
   const printButton = document.getElementById("print-button");
   if (printButton) {
-    printButton.style.display = globalConfig.userAccess.canPrint
-      ? "inline-block"
-      : "none";
+    // Hide print button if document is password protected or user doesn't have print permission
+    printButton.style.display =
+      globalConfig.userAccess.canPrint && !isPasswordProtected
+        ? "inline-block"
+        : "none";
   }
 
   // Initialize theme manager
