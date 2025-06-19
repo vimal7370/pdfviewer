@@ -164,6 +164,14 @@ window.addEventListener("blur", function () {
   close_all_menus(null);
 });
 
+//Controller for the default print functions
+window.addEventListener("beforeprint", (event) => {
+  // Prevent the default print behavior
+  event.preventDefault();
+  document.getElementById("pages").style.display = "none";
+  show_message("Unauthorized Printing detected");
+});
+
 // BACKGROUND WORKER
 
 /**
