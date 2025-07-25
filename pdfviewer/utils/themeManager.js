@@ -21,10 +21,17 @@ export function initThemeManager() {
   // Check if user has a saved preference
   const savedTheme = localStorage.getItem('theme-preference');
   
-  if (savedTheme) {
+  // Validate saved theme
+  if (savedTheme && Object.values(THEMES).includes(savedTheme)) {
     // Apply saved theme preference
     applyTheme(savedTheme);
   } else {
+    // Remove invalid theme from localStorage
+    if (savedTheme) {
+      console.warn(`Invalid theme preference detected: ${savedTheme}. Resetting to system theme.`);
+      localStorage.removeItem('theme-preference');
+    }
+    
     // Default to system preference
     applyTheme(THEMES.SYSTEM);
   }
@@ -38,24 +45,38 @@ export function initThemeManager() {
  * Order: system → light → dark → system
  */
 export function cycleTheme() {
+  let nextTheme;
+  
+  // Determine next theme with explicit validation
   switch (currentTheme) {
     case THEMES.SYSTEM:
-      applyTheme(THEMES.LIGHT);
+      nextTheme = THEMES.LIGHT;
       break;
     case THEMES.LIGHT:
-      applyTheme(THEMES.DARK);
+      nextTheme = THEMES.DARK;
       break;
     case THEMES.DARK:
-    default:
-      applyTheme(THEMES.SYSTEM);
+      nextTheme = THEMES.SYSTEM;
       break;
+    default:
+      console.warn(`Unexpected theme state: ${currentTheme}. Resetting to SYSTEM.`);
+      nextTheme = THEMES.SYSTEM;
   }
   
-  // Save user preference
-  if (currentTheme === THEMES.SYSTEM) {
+  // Validate next theme
+  if (!Object.values(THEMES).includes(nextTheme)) {
+    console.error(`Invalid theme detected: ${nextTheme}. Defaulting to SYSTEM.`);
+    nextTheme = THEMES.SYSTEM;
+  }
+  
+  // Apply theme
+  applyTheme(nextTheme);
+  
+  // Manage localStorage preference
+  if (nextTheme === THEMES.SYSTEM) {
     localStorage.removeItem('theme-preference');
   } else {
-    localStorage.setItem('theme-preference', currentTheme);
+    localStorage.setItem('theme-preference', nextTheme);
   }
   
   // Update the theme toggle icon
@@ -78,8 +99,30 @@ function applyTheme(theme) {
     document.documentElement.classList.add('theme-light', 'theme-override');
   } else if (theme === THEMES.DARK) {
     document.documentElement.classList.add('theme-dark', 'theme-override');
+  } else if (theme === THEMES.SYSTEM) {
+    // Detect system preference
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    if (prefersDarkMode.matches) {
+      document.documentElement.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.add('theme-light');
+    }
+    
+    // Add listener for system theme changes
+    prefersDarkMode.addEventListener('change', (e) => {
+      if (currentTheme === THEMES.SYSTEM) {
+        if (e.matches) {
+          document.documentElement.classList.remove('theme-light');
+          document.documentElement.classList.add('theme-dark');
+        } else {
+          document.documentElement.classList.remove('theme-dark');
+          document.documentElement.classList.add('theme-light');
+        }
+        updateThemeIcon();
+      }
+    });
   }
-  // For system theme, no additional classes needed
 }
 
 /**
@@ -101,8 +144,11 @@ function updateThemeIcon() {
       iconElement.className = 'fas fa-moon';
       break;
     case THEMES.SYSTEM:
-    default:
       iconElement.className = 'fas fa-desktop';
+      break;
+    default:
+      console.warn(`Unknown theme detected: ${currentTheme}`);
+      iconElement.className = 'fas fa-desktop'; // Fallback to system theme icon
       break;
   }
 }
